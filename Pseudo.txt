@@ -4,5 +4,44 @@ card manipulation using cv2 lib
   calculate homography matrix
   apply homography
 
+manipulation interactivity after auto-detect
+  place points at endpoints of auto-detect
+  place points at midpoints of edges
+  make points click- & drag-able
+  edges and points move when a point moves (overlay over image)
+  calculate homography from current point positions
+  allow edit of text (text editor)
+
 text recognition
+  use model from class
+  train with alphanumeric dataset
+  train with cursive dataset
+  test with data from both
+  host locally
+
+general function
+  welcome & loading screen
+  menu
+    add new deck
+    view deck
+      (...)
+        edit card
+          open text editor
+          enable click picture
+            replace picture
+            crop picture
+        delete card
+        export card
+          card file
+          png
+          pdf
+          jpg
+    draw card
+      shuffle card array
+      use rng to initialize random orientation in linked array
+      use rng to draw a random card
+    take photo/photo from library/file
+      auto detect edges & open manual editor
+      apply homography and open text editor/view
+  
   
