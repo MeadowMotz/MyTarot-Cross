@@ -23,7 +23,12 @@ general function
   welcome & loading screen
   menu
     add new deck
+      take photo/photo from library/file
+        auto detect edges & open manual editor
+        apply homography and open text editor/view
     view deck
+      carousel
+      search
       (...)
         edit card
           open text editor
@@ -37,11 +42,11 @@ general function
           pdf
           jpg
     draw card
+      waiting animation
       shuffle card array
       use rng to initialize random orientation in linked array
       use rng to draw a random card
-    take photo/photo from library/file
-      auto detect edges & open manual editor
-      apply homography and open text editor/view
+      show drawn card
+      draw another?
   
   
