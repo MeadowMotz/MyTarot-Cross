@@ -19,34 +19,37 @@ text recognition
   test with data from both
   host locally
 
-general function
+draw card
+  shuffle card array
+  use rng to initialize random orientation in linked array
+  use rng to draw a random card
+  card flip animation
+  draw another?
+
+touchscreen listener
+camera capability
+clickable buttons/menu
+scrollable menu (blur at edges?)
+
+menu hierarchy
   welcome & loading screen
   menu
+    draw card
     add new deck
       take photo/photo from library/file
-        auto detect edges & open manual editor
-        apply homography and open text editor/view
     view deck
       carousel
       search
       (...)
         edit card
-          open text editor
-          enable click picture
-            replace picture
-            crop picture
+          replace picture
+          crop picture
         delete card
         export card
           card file
           png
           pdf
           jpg
-    draw card
-      waiting animation
-      shuffle card array
-      use rng to initialize random orientation in linked array
-      use rng to draw a random card
-      show drawn card
-      draw another?
+
   
   
