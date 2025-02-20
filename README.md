@@ -1,7 +1,9 @@
 # MyTarot-IOS
-AI-powered mobile app to upload personal tarot cards and their meanings for ease of access
+Mobile app to upload personal tarot cards and their meanings for ease of access
 ## Capabilities (will) include:
--  Picture capture
+-  Camera
 -  Automatic and manual picture manipulation
 -  Text recognition
--  Object-driven file format
+-  Text editor
+-  App-specific file format
+-  Digital deck with draw-able cards
