@@ -1,8 +1,10 @@
-card manipulation using cv2 lib
+    todo: convert to throws for camera handler
+card manipulation using cv2 lib 
   find edges of card using Canny
   detect quadrilateral using Douglas-Peucker Approximation
   calculate homography matrix
   apply homography
+  DONE!
 
 manipulation interactivity after auto-detect
   place points at endpoints of auto-detect
