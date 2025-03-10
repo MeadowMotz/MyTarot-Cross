@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 def pointOrder(pts):
-# Orders points as [top-left, top-right, bottom-right, bottom-left]
+    # Orders points as [top-left, top-right, bottom-right, bottom-left]
     rect = np.zeros((4, 2), dtype="float32")
 
     # Sum of (x + y) gives an idea of top-left (min) and bottom-right (max)
@@ -16,7 +17,7 @@ def pointOrder(pts):
     rect[3] = pts[np.argmax(diff)]  # Bottom-left
 
     return rect
-    
+
 # Detects tarot card edges and returns 4 ordered points
 def detectEdges(path):
     # Read image & convert to grayscale
@@ -38,42 +39,62 @@ def detectEdges(path):
     if len(approx) == 4:
         return image, pointOrder(approx.reshape(4, 2))  # Return ordered points
     else:
-        #TODO convert to throw
-        return image, None
+        raise ValueError("Failed to detect a quadrilateral. Invalid contour.")
 
 # Debug: Draws a neon green quadrilateral around detected tarot card
 def drawQuad(image, points):
     if points is not None:
+        # Draw quadrilateral on the image
         cv2.polylines(image, [np.int32(points)], isClosed=True, color=(57, 255, 20), thickness=3)
-        cv2.imshow("Detected Card", image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        
+        # Convert BGR image to RGB for correct color display in matplotlib
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        
+        # Use matplotlib to display the image
+        plt.imshow(image_rgb)
+        plt.title("Detected Card")
+        plt.axis('off')  # Hide axes
+        plt.show()
     else:
         print("Failed to detect a quadrilateral.")
 
-# Warps the tarot card to a standard rectangle
+# Warps the tarot card to a standard rectangle based on the detected quadrilateral
 def homography(image, points):
     if points is None:
-        #TODO convert to throw
-        print("Homography failed: No card detected.")
-        return
+        raise ValueError("Homography failed: No card detected.")
 
-    # Standard card size
-    # TODO make dependent height
-    width, height = 600, 900
+    # Calculate the width and height of the quadrilateral (bounding box)
+    rect = cv2.minAreaRect(np.array(points, dtype="float32"))
+    box = cv2.boxPoints(rect)  # Get the four points of the bounding box
+    box = np.int32(box)  # Convert to integer points
+    
+    # Get width and height of the bounding box
+    width = int(rect[1][0])
+    height = int(rect[1][1])
+
+    # Reorder points if needed (rectangular order)
+    ordered_points = pointOrder(box)
+
+    # Compute homography matrix and apply to get the rectified image
     dst_pts = np.array([[0, 0], [width-1, 0], [width-1, height-1], [0, height-1]], dtype=np.float32)
-
-    # Compute & apply homography matrix
-    H = cv2.getPerspectiveTransform(points, dst_pts)
+    H = cv2.getPerspectiveTransform(ordered_points, dst_pts)
     newImage = cv2.warpPerspective(image, H, (width, height))
 
     return newImage
 
 # Debug code
-path = "tarot.jpg"
+path = "../assets/tarot.jpg"  # Ensure the path is correct
 image, quadrilateral = detectEdges(path)
 img = homography(image, quadrilateral)
+
+# Display original image with quadrilateral
 drawQuad(image, quadrilateral)
-cv2.imshow("Card", img)
+
+# Show the rectified image (final result)
+img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB for correct color display
+plt.imshow(img_rgb)
+plt.title("Card Rectified")
+plt.axis('off')  # Hide axes
+plt.show()
 cv2.waitKey(0)
 cv2.destroyAllWindows()
