@@ -1,6 +1,12 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS  # Enable CORS for local requests
+import base64
+from io import BytesIO
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
+
+app = Flask(__name__)
+CORS(app)  # Allow cross-origin requests
 
 def pointOrder(pts):
     # Orders points as [top-left, top-right, bottom-right, bottom-left]
@@ -21,7 +27,7 @@ def pointOrder(pts):
 # Detects tarot card edges and returns 4 ordered points
 def detectEdges(path):
     # Read image & convert to grayscale
-    image = cv2.imread(path)
+    image = path
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Preprocessing: Blur and Edge Detection
@@ -82,19 +88,48 @@ def homography(image, points):
 
     return newImage
 
-# Debug code
-path = "../assets/tarot.jpg"  # Ensure the path is correct
-image, quadrilateral = detectEdges(path)
-img = homography(image, quadrilateral)
+def process_image(image_data):
+    # Decode the base64 image
+    image_bytes = base64.b64decode(image_data)
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-# Display original image with quadrilateral
-drawQuad(image, quadrilateral)
+    image, quadrilateral = detectEdges(image)
+    img = homography(image, quadrilateral)
 
-# Show the rectified image (final result)
-img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB for correct color display
-plt.imshow(img_rgb)
-plt.title("Card Rectified")
-plt.axis('off')  # Hide axes
-plt.show()
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+    # Encode back to base64 to send back to Flutter
+    _, buffer = cv2.imencode('.jpg', img)
+    jpg_as_base64 = base64.b64encode(buffer).decode('utf-8')
+
+    return jpg_as_base64
+
+@app.route('/process_image', methods=['POST'])
+def process_image_route():
+    # Get the image from the request
+    data = request.json
+    image_data = data.get('image')
+
+    # Process the image and return the base64 encoded result
+    processed_image_base64 = process_image(image_data)
+
+    return jsonify({'processed_image': processed_image_base64})
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)  # Set the host to 0.0.0.0 to allow local requests
+
+# # Debug code
+# path = "../assets/tarot.jpg"  # Ensure the path is correct
+# image, quadrilateral = detectEdges(path)
+# img = homography(image, quadrilateral)
+
+# # Display original image with quadrilateral
+# drawQuad(image, quadrilateral)
+
+# # Show the rectified image (final result)
+# img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB for correct color display
+# plt.imshow(img_rgb)
+# plt.title("Card Rectified")
+# plt.axis('off')  # Hide axes
+# plt.show()
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
