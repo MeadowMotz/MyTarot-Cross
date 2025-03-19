@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:logging/logging.dart'; 
+import 'package:my_tarot_cross/EditorPage.dart';
 
 void main() {
   Logger.root.level = Level.ALL;  
@@ -24,7 +25,7 @@ class TarotApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Home'),
     );
   }
 }
@@ -68,8 +69,52 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<void> _sendImageToBackend(PlatformFile image, int edges) async {
-    _logger.info("Starting edge detection...");
+  Future<List<List<double>>> _getEdges(PlatformFile image) async {
+    String path = image.path!;
+    final bytes = await File(path).readAsBytes();
+    final base64Image = base64Encode(bytes);
+
+    final requestBody = {
+      'image': base64Image,
+    };
+
+    String? ipAddress = await _getIpAddress();
+    if (ipAddress == 'IP Address not available on this platform') {
+      ipAddress = 'localhost';
+    }
+
+    final response = await http.post(
+      Uri.parse('http://$ipAddress:5000/get_points'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(requestBody),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['image_edges'] != null) {
+        List<List<double>> edges = [];
+        for (var point in data['image_edges']) {
+          edges.add([point[0].toDouble(), point[1].toDouble()]);
+        }
+        return edges;
+      } else {
+        throw Exception('Failed to detect edges');
+      }
+    } else {
+      throw Exception('Failed to get points: ${response.statusCode}');
+    }
+  }
+
+  void _navigateToEditor(BuildContext context) async {
+    dynamic edges = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => EditorPage(imagePath: _path!, imageEdges: _getEdges(_image!))),
+    );
+    _sendImageToBackend(_image!, edges);
+  }
+
+  Future<void> _sendImageToBackend(PlatformFile image, List<List<double>>? edges) async {
+    _logger.info("Starting manipulation...");
     setState(() {
       isLoading = true; // Start loading
     });
@@ -80,7 +125,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final base64Image = base64Encode(bytes);
     final requestBody = {
       'image': base64Image,
-      'image_edges': null
+      'image_edges': edges
     };
 
     // Get the dynamic IP address before making the request
@@ -98,7 +143,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      _logger.info("Response data: $data");  // Log the response for debugging
       if (data['processed_image'] != null && data['processed_image'].isNotEmpty) {
         setState(() {
           _rectifiedImageBase64 = data['processed_image'];
@@ -122,19 +166,13 @@ class _MyHomePageState extends State<MyHomePage> {
     return SizedBox.shrink();
   }
 
-  void _navigateToEditor(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const EditorPage()),
-    );
-  }
-
  Widget _displayRectifiedImage() {
     if (isLoading) {
       // Show a loading indicator if the image is still being processed.
       return buildLoadingIndicator();
     } else if (_rectifiedImageBase64 != null && _rectifiedImageBase64!.isNotEmpty) {
-      // If the rectified image is available, display it.
+      
+
       return SizedBox(
         width: 300,
         height: 400,
@@ -183,7 +221,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                       const SizedBox(width: 20), 
                       ElevatedButton(
-                        onPressed: () => _sendImageToBackend(_image!, 0),
+                        onPressed: () => _sendImageToBackend(_image!, null),
                         child: const Text('Auto detection'),
                       ),
                     ],
@@ -197,22 +235,6 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class EditorPage extends StatelessWidget {
-  const EditorPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manual Editor'),
-      ),
-      body: Center(
-        child: const Text('Editor Page (Unimplemented)'),
       ),
     );
   }
