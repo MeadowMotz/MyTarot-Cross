@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:my_tarot_cross/NavBar.dart';
 
 class EditorPage extends StatefulWidget {
   final String imagePath;
@@ -16,6 +17,7 @@ class _EditorPageState extends State<EditorPage> {
   double imageWidth = 1, imageHeight = 1;
   double displayWidth = 300, displayHeight = 400;
   double scaleX = 1, scaleY = 1;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -28,6 +30,7 @@ class _EditorPageState extends State<EditorPage> {
     });
   }
 
+  // Initialize the image parameters for scaling
   void _loadImageSize() {
     final image = Image.file(File(widget.imagePath));
     image.image.resolve(ImageConfiguration()).addListener(
@@ -57,21 +60,24 @@ class _EditorPageState extends State<EditorPage> {
 
   void _updateCorner(int index, Offset newPosition) {
     setState(() {
+      // Clamped to stay within image bounds
       double dx = newPosition.dx.clamp(0, displayWidth);
       double dy = newPosition.dy.clamp(0, displayHeight);
       corners[index] = Offset(dx, dy);
     });
   }
 
+  // Convert from List<Offset> to List<List<double>> for backend processing
   List<List<double>> getPointsAsList() {
   return corners.map((corner) {
-    // Reverse the scaling before passing to the backend
+    // Reverse the scaling to background image
     double dx = corner.dx / scaleX;
     double dy = corner.dy / scaleY;
     return [dx, dy];
   }).toList();
 }
 
+  // Return to home with edges
   void _returnPoints() {
     Navigator.pop(context, getPointsAsList());
   }
@@ -80,10 +86,12 @@ class _EditorPageState extends State<EditorPage> {
     return Positioned(
       left: corners[index].dx - 10,
       top: corners[index].dy - 10,
+      // Draggable
       child: GestureDetector(
         onPanUpdate: (details) {
           _updateCorner(index, corners[index] + details.delta);
         },
+        // Corner icon
         child: Container(
           width: 20,
           height: 20,
@@ -99,9 +107,11 @@ class _EditorPageState extends State<EditorPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Manual Editor')),
-      body: FutureBuilder<List<List<double>>>(
+    return NavBar(context, _scaffoldKey, body());
+  }
+  
+  Widget body() {
+    return FutureBuilder<List<List<double>>>(
         future: widget.imageEdges,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -120,13 +130,13 @@ class _EditorPageState extends State<EditorPage> {
                     width: displayWidth,
                     child: Stack(
                       children: [
+                        // Background image
                         Positioned.fill(
                           child: Image.file(
                             File(widget.imagePath),
                             fit: BoxFit.cover,
                           ),
                         ),
-
                         // Draw dynamic quadrilateral overlay
                         if (corners.length == 4)
                           Positioned.fill(
@@ -134,7 +144,6 @@ class _EditorPageState extends State<EditorPage> {
                               painter: QuadrilateralPainter(corners),
                             ),
                           ),
-
                         // Corner points (draggable)
                         for (int i = 0; i < corners.length; i++)
                           _buildDraggablePoint(i),
@@ -151,8 +160,7 @@ class _EditorPageState extends State<EditorPage> {
             );
           }
         },
-      ),
-    );
+      ); 
   }
 }
 
@@ -167,7 +175,7 @@ class QuadrilateralPainter extends CustomPainter {
     if (points.length < 4) return;
 
     final paint = Paint()
-      ..color = Colors.blue.withOpacity(0.3)
+      ..color = Colors.blue.withValues(alpha: 0.3)
       ..style = PaintingStyle.fill;
 
     final borderPaint = Paint()
@@ -175,6 +183,7 @@ class QuadrilateralPainter extends CustomPainter {
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
+    // Quadrilateral path
     final path = Path()
       ..moveTo(points[0].dx, points[0].dy)
       ..lineTo(points[1].dx, points[1].dy)
@@ -182,6 +191,7 @@ class QuadrilateralPainter extends CustomPainter {
       ..lineTo(points[3].dx, points[3].dy)
       ..close();
 
+    // Draw path
     canvas.drawPath(path, paint);
     canvas.drawPath(path, borderPaint);
   }

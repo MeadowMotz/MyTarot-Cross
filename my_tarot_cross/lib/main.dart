@@ -8,6 +8,7 @@ import 'package:network_info_plus/network_info_plus.dart';
 import 'package:logging/logging.dart'; 
 import 'package:my_tarot_cross/EditorPage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:my_tarot_cross/NavBar.dart';
 
 void main() {
   Logger.root.level = Level.ALL;  
@@ -53,6 +54,7 @@ class _MyHomePageState extends State<MyHomePage> {
   TextEditingController newCardController = TextEditingController();
   String? cardName;
   final ImagePicker _picker = ImagePicker();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   Future<String?> _getIpAddress() async {
     if (Platform.isAndroid || Platform.isIOS) {
@@ -139,7 +141,6 @@ class _MyHomePageState extends State<MyHomePage> {
     if (ipAddress == 'IP Address not available on this platform') {
       ipAddress = 'localhost';
     }
-
 
     final response = await http.post(
       Uri.parse('http://$ipAddress:5000/process_image'), 
@@ -256,11 +257,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: Center(
+    return NavBar(context, _scaffoldKey, body());
+  }
+  
+  Widget body() {
+    return Center(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center, 
           crossAxisAlignment: CrossAxisAlignment.center, 
@@ -387,7 +388,6 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ],
         ),
-      ),
-    );
-  }
+      );
+  } 
 }
