@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:logging/logging.dart'; 
 import 'package:my_tarot_cross/EditorPage.dart';
+import 'package:path_provider/path_provider.dart';
 
 void main() {
   Logger.root.level = Level.ALL;  
@@ -44,6 +46,13 @@ class _MyHomePageState extends State<MyHomePage> {
   String? _path;
   String? _rectifiedImageBase64;
   bool isLoading = false;
+  String? deck;
+  String? card;
+  List<String> dropdownOptions = ['Add new deck'];
+  String selectedDeck = '';
+  TextEditingController newDeckController = TextEditingController();
+  TextEditingController newCardController = TextEditingController();
+  String cardName = '';
 
   Future<String?> _getIpAddress() async {
     if (Platform.isAndroid || Platform.isIOS) {
@@ -187,6 +196,29 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Future<void> _saveImage(String deck, String card) async {
+    try {
+      String imagePath = '../decks/${deck}/';
+
+      // Create decks and deck folder if doesnt exist
+      Directory folderDir = Directory(imagePath);
+      if (!(await folderDir.exists())) {
+        _logger.info('Creating $imagePath');
+        await folderDir.create(recursive: true);
+      }
+   
+      File destinationFile = File(imagePath = imagePath + '$card.jpg');
+
+      if (_rectifiedImageBase64 != null) {
+        Uint8List imageBytes = base64Decode(_rectifiedImageBase64!);
+        await destinationFile.writeAsBytes(imageBytes);
+
+        _logger.info('Image saved successfully at: ${destinationFile.path}');
+      }
+    } catch (e) {
+      _logger.severe('Error saving image: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -211,7 +243,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   onPressed: _pickImage,
                   child: const Text('Pick Image'),
                 ),
-                if (_image != null)
+                if (_image != null) 
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center, 
                     children: [
@@ -226,8 +258,83 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                     ],
                   ),
-              ],
-            ),
+                SizedBox(height: 5,),
+                if (_rectifiedImageBase64!=null)
+                  Row(
+                  children: [
+                    DropdownButton<String>(
+                      value: selectedDeck.isEmpty ? null : selectedDeck,  // Set null if empty
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedDeck = newValue ?? '';  // Safely update selectedDeck
+                        });
+                      },
+                      items: dropdownOptions.map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      hint: Text("Deck"),
+                    ),
+                  ],),
+                  if (selectedDeck == 'Add new deck')
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 150, // Adjust this width based on your layout
+                            child: TextField(
+                              controller: newDeckController,
+                              decoration: const InputDecoration(
+                                labelText: 'Enter Deck Name',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          ElevatedButton(
+                            onPressed: () {
+                              String newDeck = newDeckController.text.trim();
+                              if (newDeck.isNotEmpty && !dropdownOptions.contains(newDeck)) {
+                                setState(() {
+                                  dropdownOptions.insert(dropdownOptions.length - 1, newDeck); // Add before "Add new deck"
+                                  selectedDeck = newDeck; // Set it as the selected deck
+                                });
+                                newDeckController.clear(); // Clear the input field
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please enter a valid deck name')),
+                                );
+                              }
+                            },
+                            child: const Text('Add Deck'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    if (selectedDeck!='Add new deck' && _rectifiedImageBase64!=null)
+                      Row( children: [
+                        Container(
+                          width: 200, // Adjust this width based on your layout
+                          child: TextField(
+                            controller: newCardController,
+                            decoration: const InputDecoration(
+                              labelText: 'Enter Card Name',
+                            ),
+                          ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          cardName = newCardController.text.trim();
+                          newCardController.clear();
+                          _saveImage(selectedDeck, cardName!=null ? cardName : 'Card');
+                        },
+                        child: Text("Save")),
+                      ],),
+                    ],
+                  ),
             SizedBox(width:50),
             SizedBox(
               width: 300,
