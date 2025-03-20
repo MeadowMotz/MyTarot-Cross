@@ -8,18 +8,10 @@ card manipulation using cv2 lib
 
 manipulation interactivity after auto-detect
   place points at endpoints of auto-detect
-  place points at midpoints of edges
   make points click- & drag-able
   edges and points move when a point moves (overlay over image)
   calculate homography from current point positions
-  allow edit of text (text editor)
-
-text recognition
-  use model from class
-  train with alphanumeric dataset
-  train with cursive dataset
-  test with data from both
-  host locally
+    DONE!
 
 draw card
   shuffle card array
@@ -28,18 +20,19 @@ draw card
   card flip animation
   draw another?
 
-touchscreen listener
-camera capability
-clickable buttons/menu
-scrollable menu (blur at edges?)
+touchscreen listener DONE!
+camera capability DONE!
+clickable buttons/menu DONE!
+scrollable menu (blur at edges?) DONE!
 
 menu hierarchy
   welcome & loading screen
   menu
     draw card
     add new deck
-      take photo/photo from library/file
-    view deck
+      take photo/photo from library/file =
+        manual editor =
+    view deck =
       carousel
       search
       (...)
