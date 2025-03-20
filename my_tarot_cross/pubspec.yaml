@@ -39,6 +39,7 @@ dependencies:
   logging: ^1.0.2
   image: ^4.5.3
   path_provider: ^2.1.5
+  image_picker: ^1.1.2
   
 
 
