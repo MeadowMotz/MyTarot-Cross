@@ -4,11 +4,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:my_tarot_cross/DecksPage.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:logging/logging.dart'; 
 import 'package:my_tarot_cross/EditorPage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:my_tarot_cross/NavBar.dart';
 
 void main() {
   Logger.root.level = Level.ALL;  
@@ -55,6 +55,21 @@ class _MyHomePageState extends State<MyHomePage> {
   String? cardName;
   final ImagePicker _picker = ImagePicker();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+    _MyHomePageState() {
+    super.initState();
+    Directory dir = Directory('../decks/');
+    if (!dir.existsSync()) {
+      dir.createSync(recursive: true);
+    }
+
+    // Initialize decks
+    dropdownOptions.addAll(
+      dir.listSync()
+      .whereType<Directory>() // Filters only directories
+      .map((dir) => dir.uri.pathSegments[dir.uri.pathSegments.length - 2]) // Extracts only folder name
+      .toList());
+  }
 
   Future<String?> _getIpAddress() async {
     if (Platform.isAndroid || Platform.isIOS) {
@@ -257,7 +272,65 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return NavBar(context, _scaffoldKey, body());
+    return Scaffold(
+      key: _scaffoldKey,  
+      appBar: AppBar(
+        title: Text('Home'),
+        leading: IconButton(
+          icon: Icon(
+            Icons.menu, 
+            color: Colors.black,
+          ),
+          onPressed: () {
+            if (_scaffoldKey.currentState!.isDrawerOpen) {
+              _scaffoldKey.currentState!.openEndDrawer();  // Close the drawer
+            } else {
+              _scaffoldKey.currentState!.openDrawer();  // Open the drawer
+            }
+          }
+        ),
+      ),
+      body: body(),
+      // Drawer content
+      drawer: AnimatedContainer(
+        duration: Duration(milliseconds: 300),
+        width: 250,  // Adjust width on toggle
+        curve: Curves.easeInOut,
+        color: Colors.blue,
+        child: Column(
+          children: [
+            DrawerHeader(
+              child: Text(
+                'Menu',
+                style: TextStyle(fontSize: 24, color: Colors.white),
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.home, color: Colors.white),
+              title: Text('Home', style: TextStyle(color: Colors.black)),
+              onTap: () {
+                // Navigate to Home page
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => MyHomePage(title: 'Home',)),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.star, color: Colors.white),
+              title: Text('Decks', style: TextStyle(color: Colors.black)),
+              onTap: () {
+                // Navigate to Deck page
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => DecksPage()),
+                );
+              },
+            ),
+          ],
+        ),
+      )
+    );
   }
   
   Widget body() {
@@ -320,6 +393,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       hint: Text("Deck"),
                     ),
                   ],),
+                  if (selectedDeck=='' && _rectifiedImageBase64!=null)
+                    Text('Please select or make a deck'),
                   if (selectedDeck == 'Add new deck')
                     Padding(
                       padding: const EdgeInsets.all(8.0),
