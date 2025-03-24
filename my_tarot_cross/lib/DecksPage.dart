@@ -96,7 +96,7 @@ class _DecksPageState extends State<DecksPage> {
               enableInfiniteScroll: false,
               aspectRatio: 16 / 9,
               initialPage: 0,
-              enlargeFactor: 0.4,
+              enlargeFactor: 0.3,
               onPageChanged: (index, reason) {
                 setState(() {
                   currentIndex = index;
