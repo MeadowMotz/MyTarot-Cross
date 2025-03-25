@@ -43,16 +43,13 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   static final Logger _logger = Logger('MyHomePage'); 
-  String? _path;
-  String? _rectifiedImageBase64;
-  bool isLoading = false;
-  String? deck;
-  String? card;
+  String? _path, _rectifiedImageBase64, deck, card, cardName, cardMeaning;
+  bool isLoading = false, showText = false;
   List<String> dropdownOptions = ['Add new deck'];
   String selectedDeck = '';
-  TextEditingController newDeckController = TextEditingController();
-  TextEditingController newCardController = TextEditingController();
-  String? cardName;
+  TextEditingController newDeckController = TextEditingController(), 
+                        newCardController = TextEditingController(),
+                        meaningController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -207,9 +204,10 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<void> _saveImage(String deck, String card) async {
+  Future<void> _saveImage(String deck, String card, String meaning) async {
     try {
-      String imagePath = '../decks/$deck/';
+      String imagePath = '../decks/$deck/${card.split('/').first}/';
+      card = card.split('/').last;
 
       // Create decks and deck folder if doesnt exist
       Directory folderDir = Directory(imagePath);
@@ -218,11 +216,13 @@ class _MyHomePageState extends State<MyHomePage> {
         await folderDir.create(recursive: true);
       }
    
-      File destinationFile = File(imagePath = '$imagePath$card.jpg');
+      File destinationFile = File('$imagePath$card.jpg');
+      File txtFile = File('$imagePath$card.txt');
 
       if (_rectifiedImageBase64 != null) {
         Uint8List imageBytes = base64Decode(_rectifiedImageBase64!);
         await destinationFile.writeAsBytes(imageBytes);
+        await txtFile.writeAsString(meaning);
 
         _logger.info('Image saved successfully at: ${destinationFile.path}');
       }
@@ -382,6 +382,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       onChanged: (String? newValue) {
                         setState(() {
                           selectedDeck = newValue ?? '';  
+                          
                         });
                       },
                       items: dropdownOptions.map<DropdownMenuItem<String>>((String value) {
@@ -390,11 +391,11 @@ class _MyHomePageState extends State<MyHomePage> {
                           child: Text(value),
                         );
                       }).toList(),
-                      hint: Text("Deck"),
+                      hint: const Text("Deck"),
                     ),
                   ],),
                   if (selectedDeck=='' && _rectifiedImageBase64!=null)
-                    Text('Please select or make a deck'),
+                    const Text('Please select or make a deck'),
                   if (selectedDeck == 'Add new deck')
                     Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -405,7 +406,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             child: TextField(
                               controller: newDeckController,
                               decoration: const InputDecoration(
-                                labelText: 'Enter Deck Name',
+                                labelText: 'Enter deck name',
                               ),
                             ),
                           ),
@@ -432,29 +433,48 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     const SizedBox(height: 20),
                     // When deck selected and rectified image available ...
-                    if (selectedDeck!='Add new deck' && _rectifiedImageBase64!=null)
+                    if (selectedDeck!='Add new deck' && selectedDeck!='' && _rectifiedImageBase64!=null) Column(children:[
                       Row( children: [
                         // Enter card name
                         Container(
-                          width: 200, // Adjust this width based on your layout
+                          width: 300, // Adjust this width based on your layout
                           child: TextField(
                             controller: newCardController,
                             decoration: const InputDecoration(
-                              labelText: 'Enter Card Name',
+                              labelText: 'Enter card name (ex: major/Fool, swords/7)',
                             ),
                           ),
                       ),
+                      const SizedBox(width: 30,),
                       // Save rectified image
                       ElevatedButton(
                         onPressed: () {
                           cardName = newCardController.text.trim();
+                          cardMeaning = meaningController.text.trim();
                           newCardController.clear();
-                          _saveImage(selectedDeck, cardName!=null ? cardName! : 'Card');
+                          meaningController.clear();
+                          if (cardName!=null && cardMeaning!=null) _saveImage(selectedDeck, cardName!, cardMeaning!);
+                          else showText = true;
                         },
-                        child: Text("Save")),
+                        child: const Text("Save")),
                       ],),
-                    ],
-                  ),
+                      const SizedBox(height: 10,),
+                      Container(
+                        width: 400, 
+                        child: TextField(
+                          keyboardType: TextInputType.multiline,
+                          minLines: 1,
+                          maxLines: null,
+                          controller: meaningController,
+                          decoration: const InputDecoration(
+                            labelText: 'Enter card meaning',
+                          ),
+                        ),
+                      ),
+                    ]),
+                    if (showText) const Text("Please enter a card name and/or meaning"),
+                  ],
+                ),
             const SizedBox(width:50),
             // Show rectified image
             SizedBox(

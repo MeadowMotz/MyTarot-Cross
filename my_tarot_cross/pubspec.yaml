@@ -41,7 +41,8 @@ dependencies:
   path_provider: ^2.1.5
   image_picker: ^1.1.2
   permission_handler: ^11.4.0
-  carousel_slider: ^4.0.0
+  carousel_slider: ^5.0.0
+  path: ^1.8.3
   
 
 
