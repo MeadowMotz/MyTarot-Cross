@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_tarot_cross/DecksPage.dart';
+import 'package:my_tarot_cross/DrawPage.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:logging/logging.dart'; 
 import 'package:my_tarot_cross/EditorPage.dart';
@@ -273,63 +274,72 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,  
+      key: _scaffoldKey,
       appBar: AppBar(
-        title: Text('Home'),
+        title: Text('Decks'),
         leading: IconButton(
-          icon: Icon(
-            Icons.menu, 
-            color: Colors.black,
-          ),
-          onPressed: () {
-            if (_scaffoldKey.currentState!.isDrawerOpen) {
-              _scaffoldKey.currentState!.openEndDrawer();  // Close the drawer
-            } else {
-              _scaffoldKey.currentState!.openDrawer();  // Open the drawer
-            }
-          }
-        ),
+            icon: Icon(
+              Icons.menu,
+              color: Colors.black,
+            ),
+            onPressed: () {
+              if (_scaffoldKey.currentState!.isDrawerOpen) {
+                _scaffoldKey.currentState!.openEndDrawer(); // Close the drawer
+              } else {
+                _scaffoldKey.currentState!.openDrawer(); // Open the drawer
+              }
+            }),
       ),
       body: body(),
-      // Drawer content
       drawer: AnimatedContainer(
         duration: Duration(milliseconds: 300),
-        width: 250,  // Adjust width on toggle
+        width: 250, // Adjust width on toggle
         curve: Curves.easeInOut,
         color: Colors.blue,
         child: Column(
           children: [
             DrawerHeader(
-              child: Text(
+              child: const Text(
                 'Menu',
                 style: TextStyle(fontSize: 24, color: Colors.white),
               ),
             ),
             ListTile(
               leading: Icon(Icons.home, color: Colors.white),
-              title: Text('Home', style: TextStyle(color: Colors.black)),
+              title: const Text('Home', style: TextStyle(color: Colors.black)),
               onTap: () {
-                // Navigate to Home page
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => MyHomePage(title: 'Home',)),
+                  MaterialPageRoute(
+                      builder: (context) => MyHomePage(
+                            title: 'Home',
+                          )),
                 );
               },
             ),
             ListTile(
               leading: Icon(Icons.star, color: Colors.white),
-              title: Text('Decks', style: TextStyle(color: Colors.black)),
+              title: const Text('Decks', style: TextStyle(color: Colors.black)),
               onTap: () {
-                // Navigate to Deck page
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => DecksPage()),
                 );
               },
             ),
+            ListTile(
+              leading: Icon(Icons.casino_rounded, color: Colors.white),
+              title: const Text('Draw', style: TextStyle(color: Colors.black)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => DrawPage()),
+                );
+              },
+            ),
           ],
         ),
-      )
+      ),
     );
   }
   

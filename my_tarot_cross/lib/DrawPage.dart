@@ -1,30 +1,36 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
-import 'package:my_tarot_cross/DrawPage.dart';
+import 'package:my_tarot_cross/DecksPage.dart';
 import 'package:my_tarot_cross/main.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:carousel_slider/carousel_slider.dart' as slider;
+import 'package:network_info_plus/network_info_plus.dart';
 import 'package:path/path.dart' as p;
+import 'package:permission_handler/permission_handler.dart';
 
-class DecksPage extends StatefulWidget {
+class DrawPage extends StatefulWidget {
   @override
-  _DecksPageState createState() => _DecksPageState();
+  _DrawPageState createState() => _DrawPageState();
 }
 
-class _DecksPageState extends State<DecksPage> {
+class _DrawPageState extends State<DrawPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  List<String> deckOptions = ['No deck selected'];
-  String? selectedDeck;
   final List<String> imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
+  List<String> deckOptions = ['No deck selected'];
   static final Logger _logger = Logger('MyHomePage'); 
-  int currentIndex = 0;
+  String? cardBase64, selectedDeck, cardPath;
   Future<String>? _meaning;
+  bool? flipped;
   Map<String, String?> cards = {};
 
   @override
   void initState() {
     super.initState();
+
+    Future<void> requestStoragePermission() async {
+      await Permission.storage.request();
+    }
 
     if (Platform.isIOS || Platform.isAndroid) requestStoragePermission();
 
@@ -78,8 +84,65 @@ class _DecksPageState extends State<DecksPage> {
     }
   }
 
-  Future<void> requestStoragePermission() async {
-    await Permission.storage.request();
+  Future<void> drawCard(String deck) async {
+    List<FileSystemEntity> fimageFiles = [];
+    List<String> imageFiles = [];
+    final directory = Directory('../decks/$deck');
+ 
+    Future<String?> _getIpAddress() async {
+      if (Platform.isAndroid || Platform.isIOS) {
+        final info = NetworkInfo();
+        return await info.getWifiIP();
+      } else {
+        return 'IP Address not available on this platform';
+      }
+    }
+    void collectFiles(Directory dir) {
+      // Loop through all files and directories in the current directory
+      dir.listSync(recursive: true, followLinks: false).forEach((fileSystemEntity) {
+        if (fileSystemEntity is File) {
+          // Add image files to the list
+          if (imageExtensions.any((ext) => fileSystemEntity.path.toLowerCase().endsWith(ext))) {
+            fimageFiles.add(fileSystemEntity);
+          }
+        }
+      });
+    }
+
+    _logger.info("Using deck: $deck");
+    collectFiles(directory);
+    fimageFiles.forEach((file) {imageFiles.add(file.path);});
+
+    final requestBody = {
+      'images': imageFiles,
+    };
+
+    // Get the dynamic IP address before making the request
+    String? ipAddress = await _getIpAddress();
+    if (ipAddress == 'IP Address not available on this platform') {
+      ipAddress = 'localhost';
+    }
+
+    final response = await http.post(
+      Uri.parse('http://$ipAddress:5000/draw_card'), 
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(requestBody),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['card'] != null && data['card'].isNotEmpty) {
+        setState(() {
+          cardBase64 = data['image'];
+          cardPath = data['card'];
+          _meaning = File(cards[cardPath]!).readAsString();
+        });
+      } else {
+        _logger.severe("Processed image is null or empty.");
+      }
+    } else {
+      _logger.severe('Failed to process image: ${response.statusCode} - ${response.body}');
+    }
   }
 
   Widget body() {
@@ -94,7 +157,6 @@ class _DecksPageState extends State<DecksPage> {
                 cards.clear();
                 if (selectedDeck!="No deck selected") mapCards(selectedDeck!);
               });
-              _logger.info('Images used: ${cards.keys.toList()}');
             },
             items: deckOptions.map<DropdownMenuItem<String>>((String value) {
               return DropdownMenuItem<String>(
@@ -104,92 +166,53 @@ class _DecksPageState extends State<DecksPage> {
             }).toList(),
             hint: Text("Deck"),
           ),
-          if (selectedDeck == null) Text('No decks available.'),
-          const SizedBox(height: 10,),
-          Container(
-            width: 1200,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(25), // Rounded corners
-              gradient: LinearGradient(
-                colors: [
-                  Colors.purple,
-                  Colors.blue,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              border: Border(
-                bottom: BorderSide(color: Colors.black, width: 5),
-                top: BorderSide(color: Colors.black, width: 5),
+          const SizedBox(height: 20,),
+          if (cardBase64!=null) Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+            SizedBox(
+              width: 300,
+              height: 400,
+              child: Image.memory(
+                base64Decode(cardBase64!),
+                fit: BoxFit.contain,
               ),
             ),
-            padding: EdgeInsets.all(4), // Thickness of the border
-            child: Container(
+            const SizedBox(height: 50,),
+            Container(
+              width: 500,
+              height: 200,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20), // Must match Carousel item radius
-              ),
-              child:
-                slider.CarouselSlider.builder(
-                  itemCount: cards.length,
-                  itemBuilder: (context, index, realIdx) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: SizedBox(
-                          width: 300,
-                          child: Image.file(File(cards.keys.elementAt(index))),
-                      ),
-                    );
-                  },
-                  options: slider.CarouselOptions(
-                    height: 300,
-                    enlargeCenterPage: true,
-                    autoPlay: false,
-                    viewportFraction: 0.1, 
-                    enableInfiniteScroll: false,
-                    aspectRatio: 16 / 9,
-                    initialPage: 0,
-                    enlargeFactor: 0.3,
-                    onPageChanged: (index, reason) {
-                      setState(() {
-                        currentIndex = index;
-                        String imageName = cards.keys.elementAt(index); // Extract image filename
-                        _meaning = File(cards[imageName]!).readAsString();
-                      });
-                    },
-                  ),
+                border: Border(
+                  left: BorderSide(color: Colors.black),
+                  right: BorderSide(color: Colors.black),
                 ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            width: 500,
-            height: 200,
-            decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(color: Colors.black),
-                right: BorderSide(color: Colors.black),
+              ),
+              child: FutureBuilder<String>(
+                future: _meaning,  // The future to be resolved
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    // While waiting for the data
+                    return CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    // If an error occurred
+                    return Text('Error: ${snapshot.error}');
+                  } else if (snapshot.hasData) {
+                    // Once the data is available
+                    return Text(snapshot.data ?? 'No data available', textAlign: TextAlign.center,);
+                  } else {
+                    // If no data is returned
+                    return Text('No description available', textAlign: TextAlign.center,);
+                  }
+                },
               ),
             ),
-            child: FutureBuilder<String>(
-              future: _meaning,  // The future to be resolved
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  // While waiting for the data
-                  return CircularProgressIndicator();
-                } else if (snapshot.hasError) {
-                  // If an error occurred
-                  return Text('Error: ${snapshot.error}');
-                } else if (snapshot.hasData) {
-                  // Once the data is available
-                  return Text(snapshot.data ?? 'No data available', textAlign: TextAlign.center,);
-                } else {
-                  // If no data is returned
-                  return Text('No description available', textAlign: TextAlign.center,);
-                }
-              },
-            ),
+          ],),
+          if (selectedDeck!='No deck selected') ElevatedButton(
+            onPressed: () => {
+              drawCard(selectedDeck!)
+            }, 
+            child: const Text('Draw'),
           ),
         ],
       ),
@@ -201,7 +224,7 @@ class _DecksPageState extends State<DecksPage> {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        title: Text('Decks'),
+        title: Text('Draw a card'),
         leading: IconButton(
             icon: Icon(
               Icons.menu,
