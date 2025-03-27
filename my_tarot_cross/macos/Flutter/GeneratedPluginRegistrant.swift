@@ -7,7 +7,7 @@ import Foundation
 
 import file_picker
 import file_selector_macos
-import network_info_plus_macos
+import network_info_plus
 import path_provider_foundation
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {

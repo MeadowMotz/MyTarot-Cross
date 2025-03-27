@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:my_tarot_cross/DrawPage.dart';
 import 'package:my_tarot_cross/main.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:carousel_slider/carousel_slider.dart' as slider;
 import 'package:path/path.dart' as p;
@@ -21,20 +22,57 @@ class _DecksPageState extends State<DecksPage> {
   int currentIndex = 0;
   Future<String>? _meaning;
   Map<String, String?> cards = {};
+  Directory? direc;
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize storage permission request and directory setting
+    requestStoragePermission();
+    setDir();
+  }
 
-    if (Platform.isIOS || Platform.isAndroid) requestStoragePermission();
+  // Request storage permission asynchronously
+  Future<void> requestStoragePermission() async {
+    await Permission.storage.request();
+  }
 
-    deckOptions.addAll(Directory('../decks/')
+  // Set directory asynchronously based on platform
+  Future<void> setDir() async {
+    Directory? tempDir;
+
+    if (Platform.isIOS || Platform.isAndroid) {
+      tempDir = await getApplicationDocumentsDirectory();
+    } else {
+      // For other platforms, use relative path
+      tempDir = Directory('../decks/');
+    }
+
+    setState(() {
+      direc = tempDir;  // Safely assign the directory
+    });
+
+    // After setting the directory, create it if it doesn't exist
+    if (!direc!.existsSync()) {
+      direc!.createSync(recursive: true);
+    }
+
+    // Initialize dropdownOptions after the directory is set
+    initializeDropdownOptions();
+  }
+
+  // Initialize dropdown options based on the directory content
+  void initializeDropdownOptions() {
+    if (direc != null) {
+      deckOptions.addAll(direc!
       .listSync()
       .whereType<Directory>() // Filters only directories
       .map((dir) => dir.uri.pathSegments[dir.uri.pathSegments.length - 2]) // Extracts only folder name
       .toList());
     
-    selectedDeck = deckOptions[0];
+      selectedDeck = deckOptions[0];
+    }
   }
 
   void mapCards(String deck) {
@@ -76,10 +114,6 @@ class _DecksPageState extends State<DecksPage> {
         }
       }
     }
-  }
-
-  Future<void> requestStoragePermission() async {
-    await Permission.storage.request();
   }
 
   Widget body() {

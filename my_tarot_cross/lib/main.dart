@@ -10,6 +10,8 @@ import 'package:network_info_plus/network_info_plus.dart';
 import 'package:logging/logging.dart'; 
 import 'package:my_tarot_cross/EditorPage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
 
 void main() {
   Logger.root.level = Level.ALL;  
@@ -53,20 +55,56 @@ class _MyHomePageState extends State<MyHomePage> {
                         meaningController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  Directory? direc;
 
-    _MyHomePageState() {
+ @override
+  void initState() {
     super.initState();
-    Directory dir = Directory('../decks/');
-    if (!dir.existsSync()) {
-      dir.createSync(recursive: true);
+    
+    // Initialize storage permission request and directory setting
+    requestStoragePermission();
+    setDir();
+  }
+
+  // Request storage permission asynchronously
+  Future<void> requestStoragePermission() async {
+    await Permission.storage.request();
+  }
+
+  // Set directory asynchronously based on platform
+  Future<void> setDir() async {
+    Directory? tempDir;
+
+    if (Platform.isIOS || Platform.isAndroid) {
+      tempDir = await getApplicationDocumentsDirectory();
+    } else {
+      // For other platforms, use relative path
+      tempDir = Directory('../decks/');
     }
 
-    // Initialize decks
-    dropdownOptions.addAll(
-      dir.listSync()
-      .whereType<Directory>() // Filters only directories
-      .map((dir) => dir.uri.pathSegments[dir.uri.pathSegments.length - 2]) // Extracts only folder name
-      .toList());
+    setState(() {
+      direc = tempDir;  // Safely assign the directory
+    });
+
+    // After setting the directory, create it if it doesn't exist
+    if (!direc!.existsSync()) {
+      direc!.createSync(recursive: true);
+    }
+
+    // Initialize dropdownOptions after the directory is set
+    initializeDropdownOptions();
+  }
+
+  // Initialize dropdown options based on the directory content
+  void initializeDropdownOptions() {
+    if (direc != null) {
+      dropdownOptions.addAll(
+        direc!.listSync()
+          .whereType<Directory>()  // Filters only directories
+          .map((dir) => dir.uri.pathSegments[dir.uri.pathSegments.length - 2])  // Extracts folder name
+          .toList(),
+      );
+    }
   }
 
   Future<String?> _getIpAddress() async {
@@ -207,7 +245,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _saveImage(String deck, String card, String meaning) async {
     try {
-      String imagePath = '../decks/$deck/${card.split('/').first}/';
+      String imagePath = '$direc$deck/${card.split('/').first}/';
       card = card.split('/').last;
 
       // Create decks and deck folder if doesnt exist
@@ -236,10 +274,12 @@ class _MyHomePageState extends State<MyHomePage> {
     final XFile? image = await _picker.pickImage(source: ImageSource.camera);
 
     if (image != null) {
-      print('Camera image selected: ${image.path}');
-      _path = image.path;
+      _logger.info('Camera image selected: ${image.path}');
+      setState(() {
+        _path = image.path;
+      });
     } else {
-      print('Camera image selection canceled');
+      _logger.info('Camera image selection canceled');
     }
   }
 
@@ -276,7 +316,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        title: Text('Decks'),
+        title: Text('Home'),
         leading: IconButton(
             icon: Icon(
               Icons.menu,

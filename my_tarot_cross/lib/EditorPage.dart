@@ -112,7 +112,7 @@ class _EditorPageState extends State<EditorPage> {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        title: Text('Decks'),
+        title: Text('Manual Editor'),
         leading: IconButton(
             icon: Icon(
               Icons.menu,
