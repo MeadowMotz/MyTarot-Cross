@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -107,17 +108,142 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _pickImage() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.image);
-    if (result != null) {
-      if (result.files.isNotEmpty) {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: true);
+    if (result != null && result.files.isNotEmpty) {
+      if (result.files.length==1) {
         setState(() {
           _path = result.files.first.path;
         });
       }
-      else {
-        _logger.severe("No image picked");
+      else { // When multiple files, use dialogs
+        await _getDeck(context);
+        for (var file in result.files) {
+          await _sendImageToBackend(file.path!, null);
+          Map<String, String>? userInput = await _getUserInput(context); // Wait for user input
+
+          if (userInput != null) {
+            await _saveImage(selectedDeck, userInput["name"]!, userInput["meaning"]!);
+          } else {
+            _logger.info("User canceled input.");
+          }
+        }
+        setState(() {
+          _rectifiedImageBase64 = null;
+          selectedDeck = '';
+        }); 
       }
+    } else {
+      _logger.severe("No image picked");
     }
+  }
+
+  Future<void> _getDeck(BuildContext context) async {
+    showDialog(
+      context: context, 
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Select deck"),
+          content: Center(child:
+            DropdownButton<String>(
+              value: selectedDeck.isEmpty ? null : selectedDeck, 
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedDeck = newValue ?? '';  
+                });
+              },
+              items: dropdownOptions.map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              hint: const Text("Deck"),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Submit"),
+            ),
+          ],
+        );
+      }
+    );
+  }
+
+  Future<Map<String, String>?> _getUserInput(BuildContext context) async {
+    TextEditingController nameController = TextEditingController();
+    TextEditingController meaningController = TextEditingController();
+    Completer<Map<String, String>?> completer = Completer<Map<String, String>?>();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Prevents closing without input
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Enter Card Details"),
+          content: Row(
+            children: [
+              _displayRectifiedImage(),
+              const SizedBox(width: 20,),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(width: 300, child: Column(children: [
+                    TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Enter card name (ex: major/Fool, swords/7)',
+                    ),
+                  ),
+                  TextField(
+                    controller: meaningController,
+                    decoration: const InputDecoration(
+                      labelText: 'Enter card meaning',
+                    ),
+                    keyboardType: TextInputType.multiline,
+                    minLines: 1,
+                    maxLines: null,
+                  ),
+                  ],),),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                completer.complete(null); // User canceled
+                Navigator.of(context).pop();
+              },
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                if (nameController.text.trim().isNotEmpty && meaningController.text.trim().isNotEmpty) {
+                  completer.complete({
+                    "name": nameController.text.trim(),
+                    "meaning": meaningController.text.trim()
+                  });
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text("Submit"),
+            ),
+          ],
+        );
+      },
+    );
+
+    return completer.future; // Wait until user submits or cancels
   }
 
   Future<List<List<double>>> _getEdges(String path) async {
