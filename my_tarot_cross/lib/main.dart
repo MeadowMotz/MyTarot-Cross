@@ -116,7 +116,6 @@ class _MyHomePageState extends State<MyHomePage> {
         });
       }
       else { // When multiple files, use dialogs
-        await _getDeck(context);
         for (var file in result.files) {
           await _sendImageToBackend(file.path!, null);
           Map<String, String>? userInput = await _getUserInput(context); // Wait for user input
@@ -135,48 +134,6 @@ class _MyHomePageState extends State<MyHomePage> {
     } else {
       _logger.severe("No image picked");
     }
-  }
-
-  Future<void> _getDeck(BuildContext context) async {
-    showDialog(
-      context: context, 
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Select deck"),
-          content: Center(child:
-            DropdownButton<String>(
-              value: selectedDeck.isEmpty ? null : selectedDeck, 
-              onChanged: (String? newValue) {
-                setState(() {
-                  selectedDeck = newValue ?? '';  
-                });
-              },
-              items: dropdownOptions.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              hint: const Text("Deck"),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("Submit"),
-            ),
-          ],
-        );
-      }
-    );
   }
 
   Future<Map<String, String>?> _getUserInput(BuildContext context) async {
@@ -527,109 +484,103 @@ class _MyHomePageState extends State<MyHomePage> {
                     ],
                   ),
                 const SizedBox(height: 5,),
-                // When rectified image is available...
-                if (_rectifiedImageBase64!=null)
-                  Row(
-                  children: [
-                    // Select deck
-                    DropdownButton<String>(
-                      value: selectedDeck.isEmpty ? null : selectedDeck, 
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          selectedDeck = newValue ?? '';  
-                          
-                        });
-                      },
-                      items: dropdownOptions.map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                      hint: const Text("Deck"),
-                    ),
-                  ],),
-                  if (selectedDeck=='' && _rectifiedImageBase64!=null)
-                    const Text('Please select or make a deck'),
-                  if (selectedDeck == 'Add new deck')
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 150, 
-                            child: TextField(
-                              controller: newDeckController,
-                              decoration: const InputDecoration(
-                                labelText: 'Enter deck name',
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          ElevatedButton(
-                            onPressed: () {
-                              String newDeck = newDeckController.text.trim();
-                              if (newDeck.isNotEmpty && !dropdownOptions.contains(newDeck)) {
-                                setState(() {
-                                  dropdownOptions.insert(dropdownOptions.length - 1, newDeck); 
-                                  selectedDeck = newDeck; 
-                                });
-                                newDeckController.clear(); 
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Please enter a valid deck name')),
-                                );
-                              }
-                            },
-                            child: const Text('Add Deck'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    // When deck selected and rectified image available ...
-                    if (selectedDeck!='Add new deck' && selectedDeck!='' && _rectifiedImageBase64!=null) Column(children:[
-                      Row( children: [
-                        // Enter card name
+                // Select deck
+                DropdownButton<String>(
+                  value: selectedDeck.isEmpty ? null : selectedDeck, 
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      selectedDeck = newValue ?? '';  
+                    });
+                  },
+                  items: dropdownOptions.map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  hint: const Text("Deck"),
+                ),
+                if (selectedDeck=='')
+                  const Text('Please select or make a deck'),
+                if (selectedDeck == 'Add new deck')
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      children: [
                         Container(
-                          width: 300, // Adjust this width based on your layout
+                          width: 150, 
                           child: TextField(
-                            controller: newCardController,
+                            controller: newDeckController,
                             decoration: const InputDecoration(
-                              labelText: 'Enter card name (ex: major/Fool, swords/7)',
+                              labelText: 'Enter deck name',
                             ),
-                          ),
-                      ),
-                      const SizedBox(width: 30,),
-                      // Save rectified image
-                      ElevatedButton(
-                        onPressed: () {
-                          cardName = newCardController.text.trim();
-                          cardMeaning = meaningController.text.trim();
-                          newCardController.clear();
-                          meaningController.clear();
-                          if (cardName!=null && cardMeaning!=null) _saveImage(selectedDeck, cardName!, cardMeaning!);
-                          else showText = true;
-                        },
-                        child: const Text("Save")),
-                      ],),
-                      const SizedBox(height: 10,),
-                      Container(
-                        width: 400, 
-                        child: TextField(
-                          keyboardType: TextInputType.multiline,
-                          minLines: 1,
-                          maxLines: null,
-                          controller: meaningController,
-                          decoration: const InputDecoration(
-                            labelText: 'Enter card meaning',
                           ),
                         ),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                          onPressed: () {
+                            String newDeck = newDeckController.text.trim();
+                            if (newDeck.isNotEmpty && !dropdownOptions.contains(newDeck)) {
+                              setState(() {
+                                dropdownOptions.insert(dropdownOptions.length - 1, newDeck); 
+                                selectedDeck = newDeck; 
+                              });
+                              newDeckController.clear(); 
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter a valid deck name')),
+                              );
+                            }
+                          },
+                          child: const Text('Add Deck'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // When deck selected and rectified image available ...
+                  if (selectedDeck!='Add new deck' && selectedDeck!='' && _rectifiedImageBase64!=null) Column(children:[
+                    Row( children: [
+                      // Enter card name
+                      Container(
+                        width: 300, // Adjust this width based on your layout
+                        child: TextField(
+                          controller: newCardController,
+                          decoration: const InputDecoration(
+                            labelText: 'Enter card name (ex: major/Fool, swords/7)',
+                          ),
+                        ),
+                    ),
+                    const SizedBox(width: 30,),
+                    // Save rectified image
+                    ElevatedButton(
+                      onPressed: () {
+                        cardName = newCardController.text.trim();
+                        cardMeaning = meaningController.text.trim();
+                        newCardController.clear();
+                        meaningController.clear();
+                        if (cardName!=null && cardMeaning!=null) _saveImage(selectedDeck, cardName!, cardMeaning!);
+                        else showText = true;
+                      },
+                      child: const Text("Save")),
+                    ],),
+                    const SizedBox(height: 10,),
+                    Container(
+                      width: 400, 
+                      child: TextField(
+                        keyboardType: TextInputType.multiline,
+                        minLines: 1,
+                        maxLines: null,
+                        controller: meaningController,
+                        decoration: const InputDecoration(
+                          labelText: 'Enter card meaning',
+                        ),
                       ),
-                    ]),
-                    if (showText) const Text("Please enter a card name and/or meaning"),
-                  ],
-                ),
+                    ),
+                  ]),
+                  if (showText) const Text("Please enter a card name and/or meaning"),
+              ],
+            ),
             const SizedBox(width:50),
             // Show rectified image
             SizedBox(
