@@ -245,7 +245,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _saveImage(String deck, String card, String meaning) async {
     try {
-      String imagePath = '$direc$deck/${card.split('/').first}/';
+      String imagePath = '${direc!.path}$deck/${card.split('/').first}/';
       card = card.split('/').last;
 
       // Create decks and deck folder if doesnt exist
@@ -318,7 +318,7 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text('Home'),
         leading: IconButton(
-            icon: Icon(
+            icon: const Icon(
               Icons.menu,
               color: Colors.black,
             ),
@@ -345,7 +345,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.home, color: Colors.white),
+              leading: const Icon(Icons.home, color: Colors.white),
               title: const Text('Home', style: TextStyle(color: Colors.black)),
               onTap: () {
                 Navigator.push(
@@ -358,7 +358,7 @@ class _MyHomePageState extends State<MyHomePage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.star, color: Colors.white),
+              leading: const Icon(Icons.star, color: Colors.white),
               title: const Text('Decks', style: TextStyle(color: Colors.black)),
               onTap: () {
                 Navigator.push(
@@ -368,7 +368,7 @@ class _MyHomePageState extends State<MyHomePage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.casino_rounded, color: Colors.white),
+              leading: const Icon(Icons.casino_rounded, color: Colors.white),
               title: const Text('Draw', style: TextStyle(color: Colors.black)),
               onTap: () {
                 Navigator.push(

@@ -226,7 +226,7 @@ class _DrawPageState extends State<DrawPage> {
       appBar: AppBar(
         title: Text('Draw a card'),
         leading: IconButton(
-            icon: Icon(
+            icon: const Icon(
               Icons.menu,
               color: Colors.black,
             ),
@@ -253,7 +253,7 @@ class _DrawPageState extends State<DrawPage> {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.home, color: Colors.white),
+              leading: const Icon(Icons.home, color: Colors.white),
               title: const Text('Home', style: TextStyle(color: Colors.black)),
               onTap: () {
                 Navigator.push(
@@ -266,7 +266,7 @@ class _DrawPageState extends State<DrawPage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.star, color: Colors.white),
+              leading: const Icon(Icons.star, color: Colors.white),
               title: const Text('Decks', style: TextStyle(color: Colors.black)),
               onTap: () {
                 Navigator.push(
@@ -276,7 +276,7 @@ class _DrawPageState extends State<DrawPage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.casino_rounded, color: Colors.white),
+              leading: const Icon(Icons.casino_rounded, color: Colors.white),
               title: const Text('Draw', style: TextStyle(color: Colors.black)),
               onTap: () {
                 Navigator.push(

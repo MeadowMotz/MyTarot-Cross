@@ -19,6 +19,7 @@ draw card
   use rng to draw a random card
   card flip animation
   draw another?
+  DONE!
 
 touchscreen listener DONE!
 camera capability DONE!
@@ -28,23 +29,23 @@ scrollable menu (blur at edges?) DONE!
 menu hierarchy
   welcome & loading screen
   menu
-    draw card
-    add new deck
+    draw card =
+    add new deck =
       take photo/photo from library/file =
         manual editor =
     view deck =
-      carousel
+      carousel =
       search
       (...)
-        edit card
-          replace picture
-          crop picture
-        delete card
-        export card
-          card file
-          png
+        edit card =
+          replace picture =
+          crop picture =
+        delete card =
+        export card =
+          card file =
+          png =
           pdf
-          jpg
+          jpg =
 
   
   

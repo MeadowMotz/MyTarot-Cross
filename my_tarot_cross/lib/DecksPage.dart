@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:my_tarot_cross/DrawPage.dart';
@@ -7,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:carousel_slider/carousel_slider.dart' as slider;
 import 'package:path/path.dart' as p;
+import 'package:image/image.dart' as img;
 
 class DecksPage extends StatefulWidget {
   @override
@@ -116,6 +119,69 @@ class _DecksPageState extends State<DecksPage> {
     }
   }
 
+  void deleteCard(String filePath) async {
+    final fileIm = File(filePath);
+    final fileTxt = File("${p.withoutExtension(filePath)}.txt");
+
+    if (await fileIm.exists() && await fileTxt.exists()) {
+      await fileIm.delete();
+      _logger.info("Image deleted successfully");
+      await fileTxt.delete();
+      _logger.info("Text deleted successfully");
+    } else {
+      _logger.severe("File not found");
+    }
+  }
+
+  void saveCard(String filePath) async {
+    String? path = await FilePicker.platform.saveFile(
+    dialogTitle: 'Select Save Location',
+    fileName: 'card.jpg',
+    type: FileType.custom,
+    allowedExtensions: ['png', 'jpg', 'jpeg'],
+    );
+
+    if (path != null) {
+      try {
+        // Read the original file as bytes
+        List<int> bytes = await File(filePath).readAsBytes();
+
+        // Decode the image
+        img.Image? image = img.decodeImage(Uint8List.fromList(bytes));
+        if (image == null) {
+          _logger.severe('Error: Unable to decode image.');
+          return;
+        }
+
+        // Get the target file extension
+        String extension = path.split('.').last.toLowerCase();
+
+        // Encode the image in the correct format
+        List<int> newBytes;
+        switch (extension) {
+          case 'png':
+            newBytes = img.encodePng(image);
+            break;
+          case 'jpg':
+          case 'jpeg':
+            newBytes = img.encodeJpg(image);
+            break;
+          default:
+            _logger.severe('Error: Unsupported file format.');
+            return;
+        }
+
+        // Save the new file
+        await File(path).writeAsBytes(newBytes);
+        _logger.info('File saved successfully at: $path');
+      } catch (e) {
+        _logger.severe('Error saving file: $e');
+      }
+    } else {
+      _logger.info('User canceled the dialog.');
+    }
+  }
+
   Widget body() {
     return Center(
       child: Column(
@@ -197,34 +263,74 @@ class _DecksPageState extends State<DecksPage> {
             ),
           ),
           const SizedBox(height: 20),
-          Container(
-            width: 500,
-            height: 200,
-            decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(color: Colors.black),
-                right: BorderSide(color: Colors.black),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+            if (selectedDeck!='No deck selected' && selectedDeck!=null)
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.miscellaneous_services),
+                onSelected: (String value) {
+                  switch (value) {
+                    case 'Edit card': {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: const Text("To edit a card, go to the home page and create a new card with the same name")));
+                    }
+                    case 'Delete card': {
+                      String path = cards.keys.elementAt(currentIndex);
+                      deleteCard(path);
+                      setState(() {
+                        cards.remove(path);
+                      });
+                    }
+                    case 'Export card': {
+                      saveCard(cards.keys.elementAt(currentIndex));
+                    }
+                  }
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  PopupMenuItem<String>(
+                    value: 'Edit card',
+                    child: const Text('Edit card'),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'Delete card',
+                    child: const Text('Delete card'),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'Export card',
+                    child: const Text('Export card'),
+                  ),
+                ],
+            ),
+            Container(
+              width: 500,
+              height: 200,
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: Colors.black),
+                  right: BorderSide(color: Colors.black),
+                ),
+              ),
+              child: FutureBuilder<String>(
+                future: _meaning,  // The future to be resolved
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    // While waiting for the data
+                    return CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    // If an error occurred
+                    return Text('Error: ${snapshot.error}');
+                  } else if (snapshot.hasData) {
+                    // Once the data is available
+                    return Text(snapshot.data ?? 'No data available', textAlign: TextAlign.center,);
+                  } else {
+                    // If no data is returned
+                    return Text('No description available', textAlign: TextAlign.center,);
+                  }
+                },
               ),
             ),
-            child: FutureBuilder<String>(
-              future: _meaning,  // The future to be resolved
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  // While waiting for the data
-                  return CircularProgressIndicator();
-                } else if (snapshot.hasError) {
-                  // If an error occurred
-                  return Text('Error: ${snapshot.error}');
-                } else if (snapshot.hasData) {
-                  // Once the data is available
-                  return Text(snapshot.data ?? 'No data available', textAlign: TextAlign.center,);
-                } else {
-                  // If no data is returned
-                  return Text('No description available', textAlign: TextAlign.center,);
-                }
-              },
-            ),
-          ),
+          ],),
         ],
       ),
     );
@@ -237,7 +343,7 @@ class _DecksPageState extends State<DecksPage> {
       appBar: AppBar(
         title: Text('Decks'),
         leading: IconButton(
-            icon: Icon(
+            icon: const Icon(
               Icons.menu,
               color: Colors.black,
             ),
@@ -264,7 +370,7 @@ class _DecksPageState extends State<DecksPage> {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.home, color: Colors.white),
+              leading: const Icon(Icons.home, color: Colors.white),
               title: const Text('Home', style: TextStyle(color: Colors.black)),
               onTap: () {
                 Navigator.push(
@@ -277,7 +383,7 @@ class _DecksPageState extends State<DecksPage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.star, color: Colors.white),
+              leading: const Icon(Icons.star, color: Colors.white),
               title: const Text('Decks', style: TextStyle(color: Colors.black)),
               onTap: () {
                 Navigator.push(
@@ -287,7 +393,7 @@ class _DecksPageState extends State<DecksPage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.casino_rounded, color: Colors.white),
+              leading: const Icon(Icons.casino_rounded, color: Colors.white),
               title: const Text('Draw', style: TextStyle(color: Colors.black)),
               onTap: () {
                 Navigator.push(
