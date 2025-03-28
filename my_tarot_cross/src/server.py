@@ -6,7 +6,6 @@ import cv2
 import numpy as np
 import logging
 from .ImageProcessor import process_image, detectEdges
-from .RandCard import drawCard
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
@@ -84,19 +83,6 @@ def process_image_route():
     except Exception as e:
         logger.error(f"Error during image processing: {e}")
         return jsonify({"error": f"Error processing image: {e}"}), 500
-    
-@app.route('/draw_card', methods=['POST'])
-def draw_card():
-    data = request.get_json()
-    images = data.get('images')
-
-    logger.info("Drawing card")
-    image, path = drawCard(images)
-    if (image is None): return jsonify({"error": f"Error drawing card"}), 400
-
-    _, buffer = cv2.imencode('.jpg', image)
-    card = base64.b64encode(buffer).decode('utf-8')
-    return jsonify({"image": card, "card": path})
 
 # SocketIO event handler
 @socketio.on('connect')

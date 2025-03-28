@@ -7,6 +7,7 @@ import 'package:my_tarot_cross/DecksPage.dart';
 import 'package:my_tarot_cross/main.dart';
 import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:math';
 
 class DrawPage extends StatefulWidget {
   @override
@@ -18,10 +19,12 @@ class _DrawPageState extends State<DrawPage> {
   final List<String> imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
   List<String> deckOptions = ['No deck selected'];
   static final Logger _logger = Logger('MyHomePage'); 
-  String? cardBase64, selectedDeck, cardPath;
+  String? selectedDeck, cardPath;
   Future<String>? _meaning;
   bool? flipped;
   Map<String, String?> cards = {};
+  int randCard = -1;  // Generates a number between 0 and 99
+  bool randFlip = false;
 
   @override
   void initState() {
@@ -104,30 +107,13 @@ class _DrawPageState extends State<DrawPage> {
     collectFiles(directory);
     fimageFiles.forEach((file) {imageFiles.add(file.path);});
 
-    final requestBody = {
-      'images': imageFiles,
-    };
-
-    final response = await http.post(
-      Uri.parse('https://mytarot-cross.onrender.com/draw_card'), 
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(requestBody),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data['card'] != null && data['card'].isNotEmpty) {
-        setState(() {
-          cardBase64 = data['image'];
-          cardPath = data['card'];
-          _meaning = File(cards[cardPath]!).readAsString();
-        });
-      } else {
-        _logger.severe("Processed image is null or empty.");
-      }
-    } else {
-      _logger.severe('Failed to process image: ${response.statusCode} - ${response.body}');
-    }
+    Random random = Random();
+    setState(() {
+      randCard = random.nextInt(imageFiles.length); 
+      randFlip = random.nextBool();
+      _meaning = File(cards[cards.keys.elementAt(randCard)]!).readAsString();
+    });
+    _logger.info("Drew: ${cards.keys.elementAt(randCard)} (${randFlip ? "flipped" : "not flipped"})");
   }
 
   Widget body() {
@@ -141,6 +127,10 @@ class _DrawPageState extends State<DrawPage> {
                 selectedDeck = newValue ?? '';
                 cards.clear();
                 if (selectedDeck!="No deck selected") mapCards(selectedDeck!);
+                else {
+                  randCard = -1;
+                  _meaning = null;
+                }
               });
             },
             items: deckOptions.map<DropdownMenuItem<String>>((String value) {
@@ -152,15 +142,19 @@ class _DrawPageState extends State<DrawPage> {
             hint: Text("Deck"),
           ),
           const SizedBox(height: 20,),
-          if (cardBase64!=null) Row(
+          if (randCard!=-1) Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
             SizedBox(
               width: 300,
               height: 400,
-              child: Image.memory(
-                base64Decode(cardBase64!),
+              child: Transform(
+                transform: Matrix4.rotationZ(randFlip ? 3.14159 : 0), 
+                alignment: Alignment.center,
+                child: Image.file(
+                File(cards.keys.elementAt(randCard)),
                 fit: BoxFit.contain,
+                ),
               ),
             ),
             const SizedBox(height: 50,),
