@@ -14,11 +14,37 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 
 void main() {
+  startFlaskServer();
   Logger.root.level = Level.ALL;  
   Logger.root.onRecord.listen((record) {
     print('${record.level.name}: ${record.time}: ${record.message}');
   });
   runApp(const TarotApp());
+}
+
+void startFlaskServer() async {
+  // Path to Python executable (ensure it’s in the system PATH or provide full path)
+  String pythonPath = 'python'; // Use 'python3' on some systems (especially macOS/Linux)
+
+  // Path to your Flask server script
+  String serverScriptPath = './src/server.py';
+
+  // Start the Flask server as a separate process
+  Process.start(pythonPath, [serverScriptPath]).then((process) {
+    print("Flask server started");
+    
+    // Optionally listen to the process output (stdout)
+    process.stdout.transform(utf8.decoder).listen((data) {
+      print(data);
+    });
+
+    // Optionally listen to the process errors (stderr)
+    process.stderr.transform(utf8.decoder).listen((data) {
+      print(data);
+    });
+  }).catchError((e) {
+    print('Error starting Flask server: $e');
+  });
 }
 
 class TarotApp extends StatelessWidget {
