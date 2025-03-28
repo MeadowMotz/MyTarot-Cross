@@ -26,6 +26,9 @@ class _DecksPageState extends State<DecksPage> {
   Future<String>? _meaning;
   Map<String, String?> cards = {};
   Directory? direc;
+  TextEditingController searchController = TextEditingController(); 
+  final slider.CarouselSliderController _carouselController = slider.CarouselSliderController();
+
 
   @override
   void initState() {
@@ -182,92 +185,80 @@ class _DecksPageState extends State<DecksPage> {
     }
   }
 
+  int? searchCard(String searchTerm) {
+    final List<String> terms = searchTerm.split(' ');
+    // Iterate over the map to find paths that contain the search term
+    for (var entry in cards.entries) {
+      bool found = true;
+      for (var term in terms) {
+        found = found && entry.key.contains(term);
+      }
+      if (found) {
+        int num = cards.keys.toList().indexOf(entry.key);
+        _logger.info("Found ${cards.keys.toList().elementAt(num)}");
+        return num;  // Return the file path if the search term is found
+      }
+    }
+    return null;  // Return null if no match is found
+  }
+
+
   Widget body() {
     return Center(
       child: Column(
         children: [
-          DropdownButton<String>(
-            value: selectedDeck,
-            onChanged: (String? newValue) {
-              setState(() {
-                selectedDeck = newValue ?? '';
-                cards.clear();
-                if (selectedDeck!="No deck selected") mapCards(selectedDeck!);
-              });
-              _logger.info('Images used: ${cards.keys.toList()}');
-            },
-            items: deckOptions.map<DropdownMenuItem<String>>((String value) {
-              return DropdownMenuItem<String>(
-                value: value,
-                child: Text(value),
-              );
-            }).toList(),
-            hint: Text("Deck"),
-          ),
-          if (selectedDeck == null) Text('No decks available.'),
-          const SizedBox(height: 10,),
-          Container(
-            width: 1200,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(25), // Rounded corners
-              gradient: LinearGradient(
-                colors: [
-                  Colors.purple,
-                  Colors.blue,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              border: Border(
-                bottom: BorderSide(color: Colors.black, width: 5),
-                top: BorderSide(color: Colors.black, width: 5),
-              ),
-            ),
-            padding: EdgeInsets.all(4), // Thickness of the border
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20), // Must match Carousel item radius
-              ),
-              child:
-                slider.CarouselSlider.builder(
-                  itemCount: cards.length,
-                  itemBuilder: (context, index, realIdx) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: SizedBox(
-                          width: 300,
-                          child: Image.file(File(cards.keys.elementAt(index))),
-                      ),
-                    );
-                  },
-                  options: slider.CarouselOptions(
-                    height: 300,
-                    enlargeCenterPage: true,
-                    autoPlay: false,
-                    viewportFraction: 0.1, 
-                    enableInfiniteScroll: false,
-                    aspectRatio: 16 / 9,
-                    initialPage: 0,
-                    enlargeFactor: 0.3,
-                    onPageChanged: (index, reason) {
-                      setState(() {
-                        currentIndex = index;
-                        String imageName = cards.keys.elementAt(index); // Extract image filename
-                        _meaning = File(cards[imageName]!).readAsString();
-                      });
-                    },
-                  ),
-                ),
-            ),
-          ),
-          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+            DropdownButton<String>(
+              value: selectedDeck,
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedDeck = newValue ?? '';
+                  cards.clear();
+                  if (selectedDeck!="No deck selected") mapCards(selectedDeck!);
+                });
+                _logger.info('Images used: ${cards.keys.toList()}');
+              },
+              items: deckOptions.map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              hint: Text("Deck"),
+            ),
+            const SizedBox(width: 100,),
+            SizedBox(
+              width: 300,
+              child: TextField(
+                controller: searchController,
+                decoration: const InputDecoration(
+                  labelText: 'Search for a card',
+                ),
+                onSubmitted: (String search) {
+                  if (selectedDeck=='No deck selected') {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: const Text("Please select a deck first")));
+                  }
+                  else {
+                    int? num = searchCard(search);
+                    if (num==null) {ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: const Text("No card found")));}
+                    else {
+                    setState(() {
+                      currentIndex = num;
+                    });}
+                    _carouselController.animateToPage(currentIndex, duration: Duration(milliseconds: 500), curve: Curves.easeInOut);
+                  }
+                  searchController.clear();
+                },
+              ),
+            ),
+            const SizedBox(width:20),
             if (selectedDeck!='No deck selected' && selectedDeck!=null)
               PopupMenuButton<String>(
+                offset: Offset(100, 0),
                 icon: const Icon(Icons.miscellaneous_services),
                 onSelected: (String value) {
                   switch (value) {
@@ -302,35 +293,95 @@ class _DecksPageState extends State<DecksPage> {
                   ),
                 ],
             ),
-            Container(
-              width: 500,
-              height: 200,
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(color: Colors.black),
-                  right: BorderSide(color: Colors.black),
-                ),
+          ],),
+          if (selectedDeck == null) Text('No decks available.'),
+          const SizedBox(height: 10,),
+          Container(
+            width: 1200,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(25), // Rounded corners
+              gradient: LinearGradient(
+                colors: [
+                  Colors.purple,
+                  Colors.blue,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              child: FutureBuilder<String>(
-                future: _meaning,  // The future to be resolved
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    // While waiting for the data
-                    return CircularProgressIndicator();
-                  } else if (snapshot.hasError) {
-                    // If an error occurred
-                    return Text('Error: ${snapshot.error}');
-                  } else if (snapshot.hasData) {
-                    // Once the data is available
-                    return Text(snapshot.data ?? 'No data available', textAlign: TextAlign.center,);
-                  } else {
-                    // If no data is returned
-                    return Text('No description available', textAlign: TextAlign.center,);
-                  }
-                },
+              border: Border(
+                bottom: BorderSide(color: Colors.black, width: 5),
+                top: BorderSide(color: Colors.black, width: 5),
               ),
             ),
-          ],),
+            padding: EdgeInsets.all(4), // Thickness of the border
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20), // Must match Carousel item radius
+              ),
+              child:
+                slider.CarouselSlider.builder(
+                  key: Key(currentIndex.toString()),
+                  carouselController: _carouselController,
+                  itemCount: cards.length,
+                  itemBuilder: (context, index, realIdx) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: SizedBox(
+                        width: 300,
+                        child: Image.file(File(cards.keys.elementAt(index))),
+                      ),
+                    );
+                  },
+                  options: slider.CarouselOptions(
+                    height: 300,
+                    enlargeCenterPage: true,
+                    autoPlay: false,
+                    viewportFraction: 0.1,
+                    enableInfiniteScroll: false,
+                    aspectRatio: 16 / 9,
+                    initialPage: currentIndex, // Set initial page to currentIndex
+                    enlargeFactor: 0.3,
+                    onPageChanged: (index, reason) {
+                      setState(() {
+                        String imageName = cards.keys.elementAt(index); // Extract image filename
+                        _meaning = File(cards[imageName]!).readAsString();
+                      });
+                    },
+                  ),
+                ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: 500,
+            height: 200,
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(color: Colors.black),
+                right: BorderSide(color: Colors.black),
+              ),
+            ),
+            child: FutureBuilder<String>(
+              future: _meaning,  // The future to be resolved
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  // While waiting for the data
+                  return CircularProgressIndicator();
+                } else if (snapshot.hasError) {
+                  // If an error occurred
+                  return Text('Error: ${snapshot.error}');
+                } else if (snapshot.hasData) {
+                  // Once the data is available
+                  return Text(snapshot.data ?? 'No data available', textAlign: TextAlign.center,);
+                } else {
+                  // If no data is returned
+                  return Text('No description available', textAlign: TextAlign.center,);
+                }
+              },
+            ),
+          ),
         ],
       ),
     );
