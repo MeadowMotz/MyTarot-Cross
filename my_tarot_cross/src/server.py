@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import logging
 from .ImageProcessor import process_image, detectEdges
-from RandCard import drawCard
+from .RandCard import drawCard
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
