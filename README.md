@@ -9,7 +9,6 @@ Mobile app to upload personal tarot cards and their meanings for ease of access
 
 Requirements (Windows):
 -  Python installed on your machine
--  `pip install gunicorn` in your terminal
 
 Bug report:
 -  Error fetching ip address to communicate with local server on Android devices
