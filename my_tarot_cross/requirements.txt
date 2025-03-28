@@ -3,3 +3,4 @@ flask-cors
 flask-socketio
 opencv-python
 numpy
+gunicorn
