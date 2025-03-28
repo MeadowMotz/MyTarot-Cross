@@ -13,3 +13,6 @@ Requirements (Windows):
 Bug report:
 -  Error fetching ip address to communicate with local server on Android devices
 -  Unknown iOS compatability
+
+Notes:
+-  No manual editor for multi-select files
