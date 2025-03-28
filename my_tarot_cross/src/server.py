@@ -92,7 +92,7 @@ def draw_card():
 
     logger.info("Drawing card")
     image, path = drawCard(images)
-    if (image is None): return jsonify({"error": f"Error processing image: {e}"}), 400
+    if (image is None): return jsonify({"error": f"Error drawing card"}), 400
 
     _, buffer = cv2.imencode('.jpg', image)
     card = base64.b64encode(buffer).decode('utf-8')
