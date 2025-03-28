@@ -6,7 +6,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_tarot_cross/DecksPage.dart';
 import 'package:my_tarot_cross/DrawPage.dart';
-import 'package:network_info_plus/network_info_plus.dart';
 import 'package:logging/logging.dart'; 
 import 'package:my_tarot_cross/EditorPage.dart';
 import 'package:image_picker/image_picker.dart';
@@ -14,37 +13,11 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 
 void main() {
-  startFlaskServer();
   Logger.root.level = Level.ALL;  
   Logger.root.onRecord.listen((record) {
     print('${record.level.name}: ${record.time}: ${record.message}');
   });
   runApp(const TarotApp());
-}
-
-void startFlaskServer() async {
-  // Path to Python executable (ensure it’s in the system PATH or provide full path)
-  String pythonPath = 'python'; // Use 'python3' on some systems (especially macOS/Linux)
-
-  // Path to your Flask server script
-  String serverScriptPath = './src/server.py';
-
-  // Start the Flask server as a separate process
-  Process.start(pythonPath, [serverScriptPath]).then((process) {
-    print("Flask server started");
-    
-    // Optionally listen to the process output (stdout)
-    process.stdout.transform(utf8.decoder).listen((data) {
-      print(data);
-    });
-
-    // Optionally listen to the process errors (stderr)
-    process.stderr.transform(utf8.decoder).listen((data) {
-      print(data);
-    });
-  }).catchError((e) {
-    print('Error starting Flask server: $e');
-  });
 }
 
 class TarotApp extends StatelessWidget {
@@ -133,15 +106,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<String?> _getIpAddress() async {
-    if (Platform.isAndroid || Platform.isIOS) {
-      final info = NetworkInfo();
-      return await info.getWifiIP();
-    } else {
-      return 'IP Address not available on this platform';
-    }
-  }
-
   Future<void> _pickImage() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.image);
     if (result != null) {
@@ -164,13 +128,8 @@ class _MyHomePageState extends State<MyHomePage> {
       'image': base64Image,
     };
 
-    String? ipAddress = await _getIpAddress();
-    if (ipAddress == 'IP Address not available on this platform') {
-      ipAddress = 'localhost';
-    }
-
     final response = await http.post(
-      Uri.parse('http://$ipAddress:5000/get_points'),
+      Uri.parse('https://mytarot-cross.onrender.com/get_points'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(requestBody),
     );
@@ -213,14 +172,8 @@ class _MyHomePageState extends State<MyHomePage> {
       'image_edges': edges
     };
 
-    // Get the dynamic IP address before making the request
-    String? ipAddress = await _getIpAddress();
-    if (ipAddress == 'IP Address not available on this platform') {
-      ipAddress = 'localhost';
-    }
-
     final response = await http.post(
-      Uri.parse('http://$ipAddress:5000/process_image'), 
+      Uri.parse('https://mytarot-cross.onrender.com/process_image'), 
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(requestBody),
     );
