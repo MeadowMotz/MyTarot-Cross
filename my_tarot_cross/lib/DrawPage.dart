@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:my_tarot_cross/DecksPage.dart';
 import 'package:my_tarot_cross/main.dart';
-import 'package:network_info_plus/network_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart';
 
@@ -89,14 +88,6 @@ class _DrawPageState extends State<DrawPage> {
     List<String> imageFiles = [];
     final directory = Directory('../decks/$deck');
  
-    Future<String?> _getIpAddress() async {
-      if (Platform.isAndroid || Platform.isIOS) {
-        final info = NetworkInfo();
-        return await info.getWifiIP();
-      } else {
-        return 'IP Address not available on this platform';
-      }
-    }
     void collectFiles(Directory dir) {
       // Loop through all files and directories in the current directory
       dir.listSync(recursive: true, followLinks: false).forEach((fileSystemEntity) {
@@ -117,14 +108,8 @@ class _DrawPageState extends State<DrawPage> {
       'images': imageFiles,
     };
 
-    // Get the dynamic IP address before making the request
-    String? ipAddress = await _getIpAddress();
-    if (ipAddress == 'IP Address not available on this platform') {
-      ipAddress = 'localhost';
-    }
-
     final response = await http.post(
-      Uri.parse('http://$ipAddress:5000/draw_card'), 
+      Uri.parse('https://mytarot-cross.onrender.com/draw_card'), 
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(requestBody),
     );
