@@ -1,4 +1,3 @@
-    todo: convert to throws for camera handler
 card manipulation using cv2 lib 
   find edges of card using Canny
   detect quadrilateral using Douglas-Peucker Approximation
@@ -35,8 +34,8 @@ menu hierarchy
         manual editor =
     view deck =
       carousel =
-      search
-      (...)
+      search =
+      (...) =
         edit card =
           replace picture =
           crop picture =
