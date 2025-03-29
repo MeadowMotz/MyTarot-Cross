@@ -13,7 +13,10 @@ Requirements (Windows):
 Bug report:
 -  Error fetching ip address to communicate with local server on Android devices
 -  Unknown iOS compatability
--  Search bar is case sensitive
 
 Notes:
 -  No manual editor for multi-select files
+
+TODO:
+-  Search bar is case sensitive
+-  Hide pick image until deck is chosen
