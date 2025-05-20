@@ -16,7 +16,6 @@ Bug report:
 
 Notes:
 -  No manual editor for multi-select files
+-  Not compatible with web
 
 TODO:
--  Search bar is case sensitive
--  Hide pick image until deck is chosen

@@ -4,7 +4,6 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:http/http.dart' as http;
 import 'package:my_tarot_cross/DecksPage.dart';
 import 'package:my_tarot_cross/DrawPage.dart';
 import 'package:logging/logging.dart'; 
@@ -12,12 +11,14 @@ import 'package:my_tarot_cross/EditorPage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:my_tarot_cross/python.dart';
 
 void main() {
   Logger.root.level = Level.ALL;  
   Logger.root.onRecord.listen((record) {
     print('${record.level.name}: ${record.time}: ${record.message}');
   });
+
   runApp(const TarotApp());
 }
 
@@ -45,6 +46,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final PythonInterface _python = PythonInterface();
   static final Logger _logger = Logger('MyHomePage'); 
   String? _path, _rectifiedImageBase64, deck, card, cardName, cardMeaning;
   bool isLoading = false, showText = false;
@@ -200,6 +202,10 @@ class _MyHomePageState extends State<MyHomePage> {
       },
     );
 
+    setState(() {
+      _path = null;
+    });
+
     return completer.future; // Wait until user submits or cancels
   }
 
@@ -207,30 +213,9 @@ class _MyHomePageState extends State<MyHomePage> {
     final bytes = await File(path).readAsBytes();
     final base64Image = base64Encode(bytes);
 
-    final requestBody = {
-      'image': base64Image,
-    };
-
-    final response = await http.post(
-      Uri.parse('https://mytarot-cross.onrender.com/get_points'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(requestBody),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data['image_edges'] != null) {
-        List<List<double>> edges = [];
-        for (var point in data['image_edges']) {
-          edges.add([point[0].toDouble(), point[1].toDouble()]);
-        }
-        return edges;
-      } else {
-        throw Exception('Failed to detect edges');
-      }
-    } else {
-      throw Exception('Failed to get points: ${response.statusCode}');
-    }
+    final edges = await _python.getEdges(base64Image);
+    _logger.info("Edges: $edges");
+    return edges;
   }
 
   void _navigateToEditor(BuildContext context) async {
@@ -250,32 +235,11 @@ class _MyHomePageState extends State<MyHomePage> {
     _logger.info("Using image: $path");
     final bytes = await File(path).readAsBytes();
     final base64Image = base64Encode(bytes);
-    final requestBody = {
-      'image': base64Image,
-      'image_edges': edges
-    };
-
-    final response = await http.post(
-      Uri.parse('https://mytarot-cross.onrender.com/process_image'), 
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(requestBody),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data['processed_image'] != null && data['processed_image'].isNotEmpty) {
-        setState(() {
-          _rectifiedImageBase64 = data['processed_image'];
-        });
-      } else {
-        _logger.severe("Processed image is null or empty.");
-      }
-    } else {
-      _logger.severe('Failed to process image: ${response.statusCode} - ${response.body}');
-    }
-
+    final processedImg = await _python.processImage(edges, base64Image);
+    final sanitized = processedImg.replaceAll(RegExp(r'\s'), '');
     setState(() {
-      isLoading = false; 
+      _rectifiedImageBase64 = sanitized;
+      isLoading = false;
     });
   }
 
@@ -460,11 +424,12 @@ class _MyHomePageState extends State<MyHomePage> {
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                // Camera or file picker
-                ElevatedButton(
-                  onPressed: () => _showDropdownMenu(context),
-                  child: const Text('Pick Image'),
-                ),
+                if (selectedDeck != '' && selectedDeck != 'Add new deck')
+                  // Camera or file picker
+                  ElevatedButton(
+                    onPressed: () => _showDropdownMenu(context),
+                    child: const Text('Pick Image'),
+                  ),
                 const SizedBox(height: 10,),
                 if (_path != null) 
                   Row(

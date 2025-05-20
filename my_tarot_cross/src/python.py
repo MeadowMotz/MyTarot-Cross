@@ -1,10 +1,55 @@
+import base64
 import cv2
 import numpy as np
 import logging
 
+# Setup logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+def get_image_edges(image_data): 
+    # Decode the base64 image
+    image_bytes = base64.b64decode(image_data)
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    edges = detectEdges(image, None)
+
+    return edges
+
+def process_image_route(image_edges, image_data):
+    
+    if (image_edges is not None):
+        image_edges = np.array(image_edges, dtype=np.float32)
+    logger.debug(f"Received image_edges: {image_edges}")
+
+    # Decode the base64 image
+    try:
+        image_data = base64.b64decode(image_data)
+        np_arr = np.frombuffer(image_data, np.uint8)
+        image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+        if image is None or image.size == 0:
+            raise ValueError("Decoded image is empty or invalid.")
+
+    except Exception as e:
+        logger.error(f"Invalid image data: {e}")
+
+    # Process the image
+    try:
+
+        processed_image = process_image(image, image_edges)
+
+        if processed_image is None or processed_image.size == 0:
+            raise ValueError("Image processing failed, output is empty.")
+
+        _, buffer = cv2.imencode('.jpg', processed_image)
+        processed_image_base64 = base64.b64encode(buffer).decode('utf-8')
+
+        return processed_image_base64
+
+    except Exception as e:
+        logger.error(f"Error during image processing: {e}")
 
 def pointOrder(pts):
     # Orders points as [top-left, top-right, bottom-right, bottom-left]
@@ -57,9 +102,7 @@ def homography(image, points):
     return newImage
 
 def process_image(image, image_edges):
-    logger.info("Detecting edges")
     quadrilateral = detectEdges(image, image_edges)
-    logger.info("Applying homography")
     img = homography(image, quadrilateral)
     
     return img

@@ -191,7 +191,7 @@ class _DecksPageState extends State<DecksPage> {
     for (var entry in cards.entries) {
       bool found = true;
       for (var term in terms) {
-        found = found && entry.key.contains(term);
+        found = found && entry.key.toLowerCase().contains(term.toLowerCase());
       }
       if (found) {
         int num = cards.keys.toList().indexOf(entry.key);
